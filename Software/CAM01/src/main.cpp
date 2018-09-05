@@ -20,6 +20,16 @@ static const unsigned long SONY_MENU_OK = 0x9CB91;
 static const unsigned long SONY_ZOOM_PLUS = 0x52B8F;
 static const unsigned long SONY_ZOOM_LESS = 0xD2B8F;
 
+void sendToSony(unsigned long hexCode)
+{
+    for (int i=0; i<3; i++)
+    {
+        irsend.sendSony(hexCode, 20);
+        delay(40);
+    }
+}
+
+
 // Pinout
 int buttonOKPin = 2;
 int buttonLeftPin = 5;
@@ -64,12 +74,13 @@ void displayDigit(int digit)
   }
 }
 
-void sendToSony(unsigned long hexCode)
+void testDisplayAll()
 {
-    for (int i=0; i<3; i++)
+    // 7 segement test. Display ALL
+    for (int i=0; i < 20; i++)
     {
-        irsend.sendSony(hexCode, 20);
-        delay(40);
+        displayDigit(i);
+        delay(200);
     }
 }
 
@@ -101,32 +112,6 @@ void loop()
     Serial.print(buttonLeft);
     Serial.print(buttonRight);
     Serial.println(buttonOK);
-    //
-    // // check if the pushbutton is pressed. If it is, the buttonState is HIGH:
-    // if (buttonOK == HIGH)
-    // {
-    //     // turn LED on:
-    //     sendToSony(SONY_SHUTTER_T2);
-    //
-    //     displayDigit(10);   // Show Decimal point
-    //
-    //     delay(500);
-    // }
-    // else
-    // {
-    //     displayDigit(10);
-    // }
-    //
-    // //
-    // if(buttonLeft == HIGH)
-    // {
-    //     // 7 segement test. Display ALL
-    //     for (int i=0; i < 20; i++)
-    //     {
-    //         displayDigit(i);
-    //         delay(100);
-    //     }
-    // }
 
     switch(MODE)
     {

@@ -13,11 +13,11 @@ IRsend irsend;
 
 void setup()
 {
-  
+  pinMode(LED_BUILTIN, OUTPUT);
 }
 
 void loop() {
-  delay(5000); //5 second delay between each signal burst
+digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
   for (int i=0; i<3; i++){ 
 
       // irsend.sendSony(0xB4B8F, 20); // Shutter | take photo
@@ -26,7 +26,7 @@ void loop() {
 
       // irsend.sendSony(0x28B8F, 20); // Display change cycles round  // Ok
 
-      irsend.sendSony(0xECB8F, 20); // 2s
+      irsend.sendSony(0xB4B8F, 20); // 2s
 
 
 //      Photo     740239    B4B8F   // Shutter | take photo
@@ -56,7 +56,9 @@ void loop() {
       delay(40);
 
   }
+    digitalWrite(LED_BUILTIN, LOW);    // turn the LED off by making the voltage LOW
+
 
   
-	delay(5000); //5 second delay between each signal burst
+	delay(2000); //5 second delay between each signal burst
 }
