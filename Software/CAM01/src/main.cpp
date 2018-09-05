@@ -1,6 +1,6 @@
 #include <Arduino.h>
+// #include <IRremote.h>
 #include "/home/aherrero/Arduino/libraries/IRremote/IRremote.h"
-//#include <IRremote.h>
 
 // Camera
 IRsend irsend;
@@ -21,35 +21,39 @@ static const unsigned long SONY_ZOOM_PLUS = 0x52B8F;
 static const unsigned long SONY_ZOOM_LESS = 0xD2B8F;
 
 // Pinout
-const int buttonOK = 0;
-const int buttonLeft = 1;
-const int buttonRight = 2;
+int buttonOKPin = 2;
+int buttonLeftPin = 5;
+int buttonRightPin = 4;
+
+// VAR
+int timerCounter = 0;
+int MODE = 0;
 
 // 7-Segments
 int segPins[] = {12, 11, 10, 9, 8, 7, 6, 13 };   // { a b c d e f g . )
 
 byte segCode[20][8] = {
 //  a  b  c  d  e  f  g  .
-  { 1, 1, 1, 1, 1, 1, 0, 0},  // 0
-  { 0, 1, 1, 0, 0, 0, 0, 0},  // 1
-  { 1, 1, 0, 1, 1, 0, 1, 0},  // 2
-  { 1, 1, 1, 1, 0, 0, 1, 0},  // 3
-  { 0, 1, 1, 0, 0, 1, 1, 0},  // 4
-  { 1, 0, 1, 1, 0, 1, 1, 0},  // 5
-  { 1, 0, 1, 1, 1, 1, 1, 0},  // 6
-  { 1, 1, 1, 0, 0, 0, 0, 0},  // 7
-  { 1, 1, 1, 1, 1, 1, 1, 0},  // 8
-  { 1, 1, 1, 1, 0, 1, 1, 0},  // 9
-  { 0, 0, 0, 0, 0, 0, 0, 1},   // 10 -> .
-  { 0, 1, 1, 0, 0, 0, 0, 1},  // 11 -> 1.
-  { 1, 1, 0, 1, 1, 0, 1, 1},  // 12 -> 2.
-  { 1, 1, 1, 1, 0, 0, 1, 1},  // 13 -> 3.
-  { 0, 1, 1, 0, 0, 1, 1, 1},  // 14 -> 4.
-  { 1, 0, 1, 1, 0, 1, 1, 1},  // 15 -> 5.
-  { 1, 0, 1, 1, 1, 1, 1, 1},  // 16 -> 6.
-  { 1, 1, 1, 0, 0, 0, 0, 1},  // 17 -> 7.
-  { 1, 1, 1, 1, 1, 1, 1, 1},  // 18 -> 8.
-  { 1, 1, 1, 1, 0, 1, 1, 1}  // 19 -> 9.
+  { 0, 0, 0, 0, 0, 0, 1, 0},  // 0
+  { 1, 0, 0, 1, 1, 1, 1, 0},  // 1
+  { 0, 0, 1, 0, 0, 1, 0, 0},  // 2
+  { 0, 0, 0, 0, 1, 1, 0, 0},  // 3
+  { 1, 0, 0, 1, 1, 0, 0, 0},  // 4
+  { 0, 1, 0, 0, 1, 0, 0, 0},  // 5
+  { 0, 1, 0, 0, 0, 0, 0, 0},  // 6
+  { 0, 0, 0, 1, 1, 1, 1, 0},  // 7
+  { 0, 0, 0, 0, 0, 0, 0, 0},  // 8
+  { 0, 0, 0, 0, 1, 0, 0, 0},  // 9
+  { 1, 1, 1, 1, 1, 1, 1, 1},   // 10 -> .
+  { 1, 0, 0, 1, 1, 1, 1, 1},  // 11 -> 1.
+  { 0, 0, 1, 0, 0, 1, 0, 1},  // 12 -> 2.
+  { 0, 0, 0, 0, 1, 1, 0, 1},  // 13 -> 3.
+  { 1, 0, 0, 1, 1, 0, 0, 1},  // 14 -> 4.
+  { 0, 1, 0, 0, 1, 0, 0, 1},  // 15 -> 5.
+  { 0, 1, 0, 0, 0, 0, 0, 1},  // 16 -> 6.
+  { 0, 0, 0, 1, 1, 1, 1, 1},  // 17 -> 7.
+  { 0, 0, 0, 0, 0, 0, 0, 1},  // 18 -> 8.
+  { 0, 0, 0, 0, 1, 0, 0, 1}  // 19 -> 9.
 };
 
 void displayDigit(int digit)
@@ -64,19 +68,22 @@ void sendToSony(unsigned long hexCode)
 {
     for (int i=0; i<3; i++)
     {
-        //irsend.sendSony(hexCode, 20);
+        irsend.sendSony(hexCode, 20);
         delay(40);
     }
 }
 
 void setup()
 {
+    Serial.begin(9600);
+    Serial.println("Hello");
+
     // Init pin INPUT / OUTPUT
 
     // initialize the pushbutton pin as an input:
-    pinMode(buttonOK, INPUT);
-    pinMode(buttonLeft, INPUT);
-    pinMode(buttonRight, INPUT);
+    pinMode(buttonOKPin, INPUT);
+    pinMode(buttonLeftPin, INPUT);
+    pinMode(buttonRightPin, INPUT);
 
     // 7 segments
     for (int i=0; i < 8; i++)
@@ -88,20 +95,81 @@ void setup()
 void loop()
 {
     // read the state of the pushbutton value:
-    int buttonState = digitalRead(buttonOK);
+    int buttonOK = digitalRead(buttonOKPin);
+    int buttonLeft = digitalRead(buttonLeftPin);
+    int buttonRight = digitalRead(buttonRightPin);
+    Serial.print(buttonLeft);
+    Serial.print(buttonRight);
+    Serial.println(buttonOK);
+    //
+    // // check if the pushbutton is pressed. If it is, the buttonState is HIGH:
+    // if (buttonOK == HIGH)
+    // {
+    //     // turn LED on:
+    //     sendToSony(SONY_SHUTTER_T2);
+    //
+    //     displayDigit(10);   // Show Decimal point
+    //
+    //     delay(500);
+    // }
+    // else
+    // {
+    //     displayDigit(10);
+    // }
+    //
+    // //
+    // if(buttonLeft == HIGH)
+    // {
+    //     // 7 segement test. Display ALL
+    //     for (int i=0; i < 20; i++)
+    //     {
+    //         displayDigit(i);
+    //         delay(100);
+    //     }
+    // }
 
-    // check if the pushbutton is pressed. If it is, the buttonState is HIGH:
-    if (buttonState == HIGH)
+    switch(MODE)
     {
-        // turn LED on:
-        sendToSony(SONY_SHUTTER_T2);
+        case 0:
+        {
+            if(buttonLeft == HIGH)
+            {
+                if(timerCounter > 0)
+                    timerCounter--;
+            }
+            else if(buttonRight == HIGH)
+            {
+                if(timerCounter < 9)
+                    timerCounter++;
+            }
+            else if (buttonOK == HIGH)
+            {
+                MODE = 1;
+            }
 
-        displayDigit(10);   // Show Decimal point
-    }
-    else
-    {
-        displayDigit(0);
+            displayDigit(timerCounter);
+            delay(100);
+
+            break;
+        }
+        case 1:
+        {
+            // turn LED on:
+            sendToSony(SONY_SHUTTER);
+
+            delay(timerCounter * 1000);
+
+            if (buttonOK == HIGH)
+            {
+                MODE = 0;
+            }
+            break;
+        }
+        default:
+        {
+            break;
+        }
+
     }
 
-    delay(500);
 }
