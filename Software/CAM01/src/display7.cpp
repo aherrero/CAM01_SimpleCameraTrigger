@@ -26,28 +26,37 @@ void Display7::SetPinMode()
     }
 }
 
-void Display7::DisplayDigit(int digit)
+int Display7::DisplayDigit(int digit)
 {
+    if(digit > DISPLAY_MAX_DIGIT)
+        return -1;
+
     for (int i=0; i < 8; i++)
     {
         digitalWrite(segPins[i], SEGMENT_CODE_ANODE[digit][i]);
     }
+
+    return 0;
 }
 
 void Display7::ClearDisplay()
 {
-    for (int i=0; i < 8; i++)
-    {
-        digitalWrite(segPins[i], 0);
-    }
+    DisplayDigit(21);
 }
 
-void Display7::TestDisplayAll()
+void Display7::DiplayPoint(int delayMs)
+{
+    DisplayDigit(20);
+    delay(delayMs);
+    ClearDisplay();
+}
+
+void Display7::TestDisplayAll(int delayMs)
 {
     // 7 segment test. Display ALL
-    for (int i=0; i < 20; i++)
+    for (int i=0; i < DISPLAY_MAX_DIGIT + 1; i++)
     {
         DisplayDigit(i);
-        delay(200);
+        delay(delayMs);
     }
 }
