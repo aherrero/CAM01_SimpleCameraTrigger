@@ -1,150 +1,72 @@
 #include <Arduino.h>
-// #include <IRremote.h>
-#include "/home/aherrero/Arduino/libraries/IRremote/IRremote.h"
 
-// Camera
-IRsend irsend;
+#include "camera.h"
+#include "display7.h"
+#include "/home/aherrero/Arduino/libraries/Button/Button.h"
 
-static const unsigned long SONY_SHUTTER = 0xB4B8F;
-static const unsigned long SONY_SHUTTER_T2 = 0xECB8F;
-static const unsigned long SONY_VIDEO = 0x12B8F;
-
-static const unsigned long SONY_DISP = 0x28B8F;
-static const unsigned long SONY_MENU = 0x1CB8F;
-static const unsigned long SONY_MENU_UP = 0x5CB8F;
-static const unsigned long SONY_MENU_DOWN = 0xDCB8F;
-static const unsigned long SONY_MENU_RIGHT = 0xFCB8F;
-static const unsigned long SONY_MENU_LEFT = 0x7CB8F;
-static const unsigned long SONY_MENU_OK = 0x9CB91;
-
-static const unsigned long SONY_ZOOM_PLUS = 0x52B8F;
-static const unsigned long SONY_ZOOM_LESS = 0xD2B8F;
-
-void sendToSony(unsigned long hexCode)
-{
-    for (int i=0; i<3; i++)
-    {
-        irsend.sendSony(hexCode, 20);
-        delay(40);
-    }
-}
-
-
-// Pinout
-int buttonOKPin = 2;
-int buttonLeftPin = 5;
-int buttonRightPin = 4;
 
 // VAR
 int timerCounter = 0;
 int MODE = 0;
 
-// 7-Segments
-int segPins[] = {12, 11, 10, 9, 8, 7, 6, 13 };   // { a b c d e f g . )
+// class
+Display7 display(12, 11, 10, 9, 8, 7, 6, 13);
 
-byte segCode[20][8] = {
-//  a  b  c  d  e  f  g  .
-  { 0, 0, 0, 0, 0, 0, 1, 0},  // 0
-  { 1, 0, 0, 1, 1, 1, 1, 0},  // 1
-  { 0, 0, 1, 0, 0, 1, 0, 0},  // 2
-  { 0, 0, 0, 0, 1, 1, 0, 0},  // 3
-  { 1, 0, 0, 1, 1, 0, 0, 0},  // 4
-  { 0, 1, 0, 0, 1, 0, 0, 0},  // 5
-  { 0, 1, 0, 0, 0, 0, 0, 0},  // 6
-  { 0, 0, 0, 1, 1, 1, 1, 0},  // 7
-  { 0, 0, 0, 0, 0, 0, 0, 0},  // 8
-  { 0, 0, 0, 0, 1, 0, 0, 0},  // 9
-  { 1, 1, 1, 1, 1, 1, 1, 1},   // 10 -> .
-  { 1, 0, 0, 1, 1, 1, 1, 1},  // 11 -> 1.
-  { 0, 0, 1, 0, 0, 1, 0, 1},  // 12 -> 2.
-  { 0, 0, 0, 0, 1, 1, 0, 1},  // 13 -> 3.
-  { 1, 0, 0, 1, 1, 0, 0, 1},  // 14 -> 4.
-  { 0, 1, 0, 0, 1, 0, 0, 1},  // 15 -> 5.
-  { 0, 1, 0, 0, 0, 0, 0, 1},  // 16 -> 6.
-  { 0, 0, 0, 1, 1, 1, 1, 1},  // 17 -> 7.
-  { 0, 0, 0, 0, 0, 0, 0, 1},  // 18 -> 8.
-  { 0, 0, 0, 0, 1, 0, 0, 1}  // 19 -> 9.
-};
-
-void displayDigit(int digit)
-{
-  for (int i=0; i < 8; i++)
-  {
-    digitalWrite(segPins[i], segCode[digit][i]);
-  }
-}
-
-void testDisplayAll()
-{
-    // 7 segement test. Display ALL
-    for (int i=0; i < 20; i++)
-    {
-        displayDigit(i);
-        delay(200);
-    }
-}
+Button buttonOK = Button(2, BUTTON_PULLDOWN);
+Button buttonLeft = Button(5, BUTTON_PULLDOWN);
+Button buttonRight = Button(4, BUTTON_PULLDOWN);
 
 void setup()
 {
+    // Start Serial
     Serial.begin(9600);
     Serial.println("Hello");
 
-    // Init pin INPUT / OUTPUT
+    // Init Pinout
+    // Buttons alredy init as INPUT in the class Button.
 
-    // initialize the pushbutton pin as an input:
-    pinMode(buttonOKPin, INPUT);
-    pinMode(buttonLeftPin, INPUT);
-    pinMode(buttonRightPin, INPUT);
-
-    // 7 segments
-    for (int i=0; i < 8; i++)
-    {
-      pinMode(segPins[i], OUTPUT);
-    }
+    // Display 7 segments init
+    display.SetPinMode();
 }
 
 void loop()
 {
     // read the state of the pushbutton value:
-    int buttonOK = digitalRead(buttonOKPin);
-    int buttonLeft = digitalRead(buttonLeftPin);
-    int buttonRight = digitalRead(buttonRightPin);
-    Serial.print(buttonLeft);
-    Serial.print(buttonRight);
-    Serial.println(buttonOK);
 
     switch(MODE)
     {
         case 0:
         {
-            if(buttonLeft == HIGH)
+            if(buttonRight.isPressed())
             {
                 if(timerCounter > 0)
                     timerCounter--;
             }
-            else if(buttonRight == HIGH)
+            else if(buttonLeft.isPressed())
             {
                 if(timerCounter < 9)
                     timerCounter++;
             }
-            else if (buttonOK == HIGH)
+            else if(buttonOK.isPressed())
             {
                 MODE = 1;
             }
 
-            displayDigit(timerCounter);
+            display.DisplayDigit(timerCounter);
             delay(100);
 
             break;
         }
         case 1:
         {
-            // turn LED on:
-            sendToSony(SONY_SHUTTER);
+            display.ClearDisplay();
+
+            Camera sonyA6000;
+            sonyA6000.SonyShutter();
 
             delay(timerCounter * 1000);
 
-            if (buttonOK == HIGH)
+            if(buttonOK.isPressed())
             {
                 MODE = 0;
             }
