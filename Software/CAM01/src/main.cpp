@@ -23,7 +23,7 @@ int DecreaseTimerDigit(int selectedTime);
 void TriggerCameraRepetition();
 
 // class
-Display7 display(12, 11, 10, 9, 8, 7, 6, 13);
+Display7 display(7, 6, 10, 9, 8, 12, 11, 13);
 Camera sonyA6000;
 
 Button buttonOK = Button(2, BUTTON_PULLDOWN);
