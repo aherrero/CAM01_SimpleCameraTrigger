@@ -2,9 +2,7 @@
 #define Camera_h
 
 #include "Arduino.h"
-
-// #include <IRremote.h>
-#include "/home/aherrero/Arduino/libraries/IRremote/IRremote.h"
+#include <IRremote.h>
 
 // Const
 static const unsigned long SONY_SHUTTER = 0xB4B8F;

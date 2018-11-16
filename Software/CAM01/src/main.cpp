@@ -1,8 +1,9 @@
 #include <Arduino.h>
+#include <LowPower.h>
+#include <Button.h>
 
 #include "camera.h"
 #include "display7.h"
-#include "/home/aherrero/Arduino/libraries/Button/Button.h"
 
 
 // Declaration
@@ -13,8 +14,9 @@ int selectedTimeSec_digit2 = 0;
 int selectedTimeSec_digit3 = 0;
 int selectedTimeSec_Total_Sec = 0;
 unsigned long timeCamera;
+unsigned long currentCounter = 0;
 unsigned long timeButton;
-static const bool SERIAL_COMM_ENABLE = true;
+static const bool SERIAL_COMM_ENABLE = false;
 
 // Function
 void callback_ButtonOKPressed();
@@ -118,24 +120,30 @@ void loop()
         }
         case 3:
         {
+            // idle 1 sec to save power (in a bare atmega, 8.7mA vs 10mA)
+            // LowPower.idle(SLEEP_8S, ADC_OFF, TIMER2_OFF, TIMER1_OFF, TIMER0_ON, SPI_OFF, USART0_OFF, TWI_OFF);
+
+            // power down, 3.9mA vs 10mA
+            if(selectedTimeSec_Total_Sec != 0)
+                LowPower.powerDown(SLEEP_1S, ADC_ON, BOD_OFF);  //ADC_ON Because we need the external interrupt ON
+
             // Diff time between now and the time when button ok was pressed
-            unsigned long currentTime = millis();
-            long diff = currentTime - timeCamera;
-            float diffSec = diff / 1000.0;
+            // unsigned long currentTime = millis();
+            currentCounter = currentCounter + 1;
 
             // Show the timer counter
             if(SERIAL_COMM_ENABLE)
             {
                 Serial.print("Timer: ");
-                Serial.println(diffSec);
+                Serial.println(currentCounter);
             }
 
             // If the difference between both timer are bigger or equal than the time selected
             // Trigger the camera signal and restart the timer
-            if(diffSec >= selectedTimeSec_Total_Sec)
+            if(currentCounter >= selectedTimeSec_Total_Sec)
             {
                 TriggerCameraRepetition();
-                timeCamera = millis();
+                currentCounter = 0;
             }
 
             break;
@@ -146,7 +154,7 @@ void loop()
         }
     }
 
-    delay(100);
+    delay(10);
 }
 
 int IncrementTimerDigit(int selectedTime)
@@ -159,6 +167,8 @@ int IncrementTimerDigit(int selectedTime)
         Serial.print("Digit value: ");
         Serial.println(selectedTime);
     }
+
+    delay(100);
 
     return selectedTime;
 }
@@ -173,6 +183,8 @@ int DecreaseTimerDigit(int selectedTime)
         Serial.print("Digit value: ");
         Serial.println(selectedTime);
     }
+
+    delay(100);
 
     return selectedTime;
 }
@@ -195,60 +207,45 @@ void callback_ButtonOKPressed()
     if(SERIAL_COMM_ENABLE)
         Serial.println("Interrupt Button OK");
 
-    unsigned long currentTime = millis();
-
-    // To avoid pressing several times the button OK in the same seconds
-    // Counter for not allowing press the button in 1 sec.
-    int timeBetween2ButtonOK = 1000;    //1000 ms
-    if(currentTime > timeButton + timeBetween2ButtonOK)  // 2s between pushbutton
+    if(buttonOK.isPressed())
     {
-        if(buttonOK.isPressed())
+        timeButton = millis();    // Update timebutton to not allow push the button in X time
+
+        if(SERIAL_COMM_ENABLE)
+            Serial.println("OK allowed");
+        if(currentMode != 3)
         {
-            timeButton = millis();    // Update timebutton to not allow push the button in X time
-
-            if(SERIAL_COMM_ENABLE)
-                Serial.println("OK allowed");
-            if(currentMode != 3)
+            currentMode++;
+            if(currentMode == 3)
             {
-                currentMode++;
-                if(currentMode == 3)
+                // Just changed to RUN MODE
+                display.ClearDisplay();
+
+                // Calculate total time configured
+                selectedTimeSec_Total_Sec = selectedTimeSec_digit1 * 100 + selectedTimeSec_digit2 * 10 + selectedTimeSec_digit3;
+
+                // Show in UART if enabled
+                if(SERIAL_COMM_ENABLE)
                 {
-                    // Just changed to RUN MODE
-                    display.ClearDisplay();
-
-                    // Calculate total time configured
-                    selectedTimeSec_Total_Sec = selectedTimeSec_digit1 * 100 + selectedTimeSec_digit2 * 10 + selectedTimeSec_digit3;
-
-                    // Show in UART if enabled
-                    if(SERIAL_COMM_ENABLE)
-                    {
-                        Serial.print("Time selected: ");
-                        Serial.println(selectedTimeSec_Total_Sec);
-                    }
-
-                    // Restart timer counter
-                    timeCamera = millis();      // Update timer for trigger
-
+                    Serial.print("Time selected: ");
+                    Serial.println(selectedTimeSec_Total_Sec);
                 }
-            }
-            else
-            {
-                // If Arduino in RUN_MODE, when the Button OK is pressed
-                // Return to the state 0 (Select the first digit)
-                currentMode = 0;
+
+                // Restart timer counter
+                // timeCamera = millis();      // Update timer for trigger
+                currentCounter = 0;
+
             }
         }
-    }
-    else
-    {
-        if(SERIAL_COMM_ENABLE)
+        else
         {
-            Serial.print("[Warning] Time minimum between two pulsations: ");
-            Serial.println(timeBetween2ButtonOK);
+            // If Arduino in RUN_MODE, when the Button OK is pressed
+            // Return to the state 0 (Select the first digit)
+            currentMode = 0;
         }
     }
 
     // Delay a little bit to avoid bouncing
     // Careful, delay in a callback
-    delay(50);
+    delay(250);
 }
